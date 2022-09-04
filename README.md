@@ -1,2 +1,2 @@
 # Drivogram
-A Cloud drive within Telegram
+A Cloud Storage Drive within yourself
