@@ -15,6 +15,7 @@ from fastapi import (
     FastAPI,
     Header,
     HTTPException,
+    Response,
     UploadFile,
 )
 from fastapi.responses import StreamingResponse
@@ -34,6 +35,17 @@ chat_id = config.chat_id
 choose = [app1, app2, app3, app4]
 nest_asyncio.apply()
 web = FastAPI()
+
+from fastapi.middleware.cors import CORSMiddleware
+
+web.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 
 @web.on_event("startup")
@@ -79,14 +91,14 @@ async def home(
 
 
 @web.post("/api/signup")
-async def data(Name: str | None = Header(default=None)):
+async def data(NAME: str | None = Header(default=None)):
     data_object.create_user_table("UserData")
-    if Name == None or Name == "":
+    if NAME == None or NAME == "":
         raise HTTPException(
             status_code=422,
             detail="missing parameter 'name',provide a name",
         )
-    return {"X-API-KEY": data_object.add_user(Name)}
+    return {"X-API-KEY": data_object.add_user(NAME)}
 
 
 @web.post("/api/logincheck")
@@ -131,6 +143,7 @@ async def delete(
 
 @web.get("/api/download")
 async def download(
+    response: Response,
     FILE_KEY: str | None = Header(default=None),
     X_API_KEY: APIKey = Depends(auth.apikey),
 ):
@@ -139,9 +152,14 @@ async def download(
             status_code=404, detail="Invalid file Key"
         )
 
-    message_id, content_type = data_object.getFile(
-        file_key=FILE_KEY, User_id=X_API_KEY
-    )
+    (
+        message_id,
+        content_type,
+        content_length,
+        file_name,
+    ) = data_object.getFile(file_key=FILE_KEY, User_id=X_API_KEY)
+    response.headers["X-FILE-SIZE"] = content_length
+    response.headers["X-FILE-NAME"] = file_name
     if message_id == None:
         raise HTTPException(status_code=404, detail="Not Found")
     else:
@@ -152,7 +170,13 @@ async def download(
             client=random_client, fileID=file_id
         )
     return StreamingResponse(
-        stream_data, status_code=200, media_type=content_type
+        stream_data,
+        status_code=200,
+        media_type=content_type,
+        headers={
+            "X-FILE-SIZE": content_length,
+            "X-FILE-NAME": file_name,
+        },
     )
 
 

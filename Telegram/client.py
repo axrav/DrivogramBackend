@@ -1,5 +1,6 @@
-from Config.config import config
 from pyrogram import Client
+
+from Config.config import config
 
 app1 = Client(
     "app1",
