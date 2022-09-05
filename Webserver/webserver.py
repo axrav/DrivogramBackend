@@ -21,7 +21,6 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from fastapi.security.api_key import APIKey
 from Functions.functions import chunk_stream, convert_bytes, data_key
-from pyrogram import Client
 
 import auth
 
@@ -158,8 +157,6 @@ async def download(
         content_length,
         file_name,
     ) = data_object.getFile(file_key=FILE_KEY, User_id=X_API_KEY)
-    response.headers["X-FILE-SIZE"] = content_length
-    response.headers["X-FILE-NAME"] = file_name
     if message_id == None:
         raise HTTPException(status_code=404, detail="Not Found")
     else:
