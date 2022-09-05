@@ -2,7 +2,6 @@ import random
 import string
 
 import psycopg2
-
 from Config.config import config
 from Functions.functions import data_key
 
@@ -121,10 +120,7 @@ class database:
 
     def getFile(self, file_key, User_id):
         self.cursor.execute(
-            f"SELECT MessageID, Content, FileSize, Filename from FileData where USERID = '{str(User_id)}' and Filekey = '{str(file_key)}'"
+            f"SELECT MessageID from FileData where USERID = '{str(User_id)}' and Filekey = '{str(file_key)}'"
         )
         row = self.cursor.fetchone()
-        if row:
-            return row[0], row[1], row[2], row[3]
-        else:
-            return None, None, None, None
+        return row[0] if row else None

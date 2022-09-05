@@ -1,6 +1,7 @@
-from Database.db import database
 from fastapi import HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
+
+from Database.db import database
 
 da = database()
 

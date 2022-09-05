@@ -8,8 +8,8 @@ import asyncio
 import random
 from io import BytesIO
 
+import auth
 import uvicorn
-from Database.db import database
 from fastapi import (
     Depends,
     FastAPI,
@@ -20,14 +20,15 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from fastapi.security.api_key import APIKey
-from Functions.functions import chunk_stream, convert_bytes, data_key
 
-import auth
+from Database.db import database
+from Functions.functions import chunk_stream, data_key
 
 data_object = database()
 import nest_asyncio
-from Config.config import config
 from pyrogram import idle
+
+from Config.config import config
 from Telegram.client import app1, app2, app3, app4
 
 chat_id = config.chat_id
@@ -74,7 +75,7 @@ async def home(
     )
     data_object.insert_file_data(
         filename=IN_FILE.filename,
-        fileSize=convert_bytes(doc.document.file_size),
+        fileSize=doc.document.file_size,
         MessageID=doc.id,
         FileKey=key_file,
         UserID=X_API_KEY,
@@ -150,28 +151,27 @@ async def download(
         raise HTTPException(
             status_code=404, detail="Invalid file Key"
         )
-
-    (
-        message_id,
-        content_type,
-        content_length,
-        file_name,
-    ) = data_object.getFile(file_key=FILE_KEY, User_id=X_API_KEY)
+    message_id = data_object.getFile(
+        file_key=FILE_KEY, User_id=X_API_KEY
+    )
     if message_id == None:
         raise HTTPException(status_code=404, detail="Not Found")
     else:
         random_client = random.choice(choose)
         msg = await random_client.get_messages(chat_id, message_id)
         file_id = msg.document.file_id
+        file_size = msg.document.file_size
+        file_name = msg.document.file_name
+        file_content = msg.document.mime_type
         stream_data = chunk_stream(
             client=random_client, fileID=file_id
         )
     return StreamingResponse(
         stream_data,
         status_code=200,
-        media_type=content_type,
+        media_type=file_content,
         headers={
-            "X-FILE-SIZE": content_length,
+            "content-length": str(file_size),
             "X-FILE-NAME": file_name,
         },
     )
