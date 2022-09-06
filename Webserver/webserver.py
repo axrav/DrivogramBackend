@@ -18,7 +18,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.security.api_key import APIKey
 
 from Database.db import database
@@ -98,7 +98,7 @@ async def data(NAME: str | None = Header(default=None)):
             status_code=422,
             detail="missing parameter 'name',provide a name",
         )
-    return {"X-API-KEY": data_object.add_user(NAME)}
+    return JSONResponse({"X-API-KEY": data_object.add_user(NAME)}, status_code=200)
 
 
 @web.post("/api/logincheck")
