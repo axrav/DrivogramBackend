@@ -21,7 +21,7 @@ class database:
             f"""CREATE TABLE IF NOT EXISTS {table_name}(
             Index Serial PRIMARY KEY,
             filename VARCHAR(200) NOT NULL,
-            FileSize INT,
+            FileSize VARCHAR(300) NOT NULL,
             MessageID INT UNIQUE NOT NULL,
             FileKey VARCHAR(20) UNIQUE NOT NULL,
             UserID VARCHAR(50) NOT NULL,

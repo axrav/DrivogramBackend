@@ -75,7 +75,7 @@ async def home(
     )
     data_object.insert_file_data(
         filename=IN_FILE.filename,
-        fileSize=doc.document.file_size,
+        fileSize=str(doc.document.file_size),
         MessageID=doc.id,
         FileKey=key_file,
         UserID=X_API_KEY,
