@@ -118,12 +118,10 @@ class database:
         if row:
             self.cursor.execute(
             f"DELETE from FileData where Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'"
-            return row[0]
         )
             self.conn.commit()
-        else:
-            return None
-
+            return row[0]
+        
     def getFile(self, file_key, User_id):
         self.cursor.execute(
             f"SELECT MessageID from FileData where USERID = '{str(User_id)}' and Filekey = '{str(file_key)}'"
