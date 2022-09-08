@@ -82,12 +82,11 @@ async def home(
         Content=IN_FILE.content_type,
         Time=doc.date,
     )
-    return {
-        "status": 200,
+    return JSONResponse(status_code=200,content={
         "msg": "file uploaded successfully",
         "file_key": key_file,
         "user": X_API_KEY,
-    }
+    })
 
 
 @web.post("/api/signup")
@@ -104,28 +103,24 @@ async def data(NAME: str | None = Header(default=None)):
 @web.post("/api/logincheck")
 async def login(X_API_KEY: str | None = Header(default=None)):
     if X_API_KEY == None:
-        return {
-            "status": 422,
-            "error": "missing parameter 'X-API-KEY',provide key to login",
-        }
+        raise HTTPException(status_code=422, detail="NO X-API KEY PROVIDED UNABLE TO PROCEED")
     x = data_object.login_check(X_API_KEY)
     if x == None:
         raise HTTPException(
             status_code=401,
             detail="Unauthorized Login, Please signup",
         )
-    return {
-        "status": 200,
+    return JSONResponse(status_code=200,content={
         "message": f"Logged in Successfully as {x}",
-    }
+    })
 
 
 @web.get("/api/uploads")
 async def uploads(X_API_KEY: APIKey = Depends(auth.apikey)):
-    return {
+    return JSONResponse(status_code=200, content={
         "User": X_API_KEY,
         "Uploads": data_object.get_uploads(X_API_KEY),
-    }
+    })
 
 
 @web.delete("/api/delete")
@@ -134,11 +129,10 @@ async def delete(
     X_API_KEY: APIKey = Depends(auth.apikey),
 ):
     data_object.deleteFile(FILE_KEY)
-    return {
+    return JSONResponse(status_code=200,content={
         "user": X_API_KEY,
-        "status": 200,
         "message": "Deleted the file successfully",
-    }
+    })
 
 
 @web.get("/api/download")
