@@ -128,7 +128,7 @@ async def delete(
     FILE_KEY: str | None = Header(default=None),
     X_API_KEY: APIKey = Depends(auth.apikey),
 ):
-    data_object.deleteFile(FILE_KEY)
+    data_object.deleteFile(FILE_KEY, X_API_KEY)
     return JSONResponse(status_code=200,content={
         "user": X_API_KEY,
         "file": FILE_KEY,
