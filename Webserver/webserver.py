@@ -128,10 +128,15 @@ async def delete(
     FILE_KEY: str | None = Header(default=None),
     X_API_KEY: APIKey = Depends(auth.apikey),
 ):
-    data_object.deleteFile(FILE_KEY, X_API_KEY)
+    name = data_object.deleteFile(FILE_KEY, X_API_KEY)
+    if name == None:
+        raise HTTPException(
+            status_code=404,
+            detail="File Not Found"
+        )
     return JSONResponse(status_code=200,content={
         "user": X_API_KEY,
-        "file": FILE_KEY,
+        "file": name,
         "message": "Deleted the file successfully",
     })
 

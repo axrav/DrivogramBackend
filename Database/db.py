@@ -113,10 +113,16 @@ class database:
             return []
 
     def deleteFile(self, file_key, User_id):
-        self.cursor.execute(
+        self.cursor.execute(f"Select Filename from FileData where Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'")
+        row = self.cursor.fetchone()
+        if row:
+            self.cursor.execute(
             f"DELETE from FileData where Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'"
+            return row[0]
         )
-        self.conn.commit()
+            self.conn.commit()
+        else:
+            return None
 
     def getFile(self, file_key, User_id):
         self.cursor.execute(
