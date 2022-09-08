@@ -131,6 +131,7 @@ async def delete(
     data_object.deleteFile(FILE_KEY)
     return JSONResponse(status_code=200,content={
         "user": X_API_KEY,
+        "file": FILE_KEY,
         "message": "Deleted the file successfully",
     })
 
