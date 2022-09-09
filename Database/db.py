@@ -2,6 +2,7 @@ import random
 import string
 
 import psycopg2
+
 from Config.config import config
 from Functions.functions import data_key
 
@@ -67,7 +68,7 @@ class database:
         self.conn.commit()
 
     def display_table_data(self, table_name):
-        self.cursor.execute(f"Select * from {table_name}")
+        self.cursor.execute(f"SELECT * FROM {table_name}")
 
     def add_user(self, name):
         key = data_key("DRIVO-", 10)
@@ -87,7 +88,7 @@ class database:
 
     def login_check(self, key):
         self.cursor.execute(
-            f"SELECT Username from USERDATA WHERE USERID = '{str(key)}';"
+            f"SELECT Username from Userdata WHERE USERID = '{str(key)}';"
         )
         row = self.cursor.fetchone()
         if row:
@@ -95,7 +96,7 @@ class database:
 
     def get_uploads(self, key):
         self.cursor.execute(
-            f"SELECT FILENAME, CONTENT, Filesize, FileKey from FILEDATA where USERID = '{str(key)}';"
+            f"SELECT filename, content, Filesize, FileKey FROM filedata WHERE USERID = '{str(key)}';"
         )
         rows = self.cursor.fetchall()
         final_data = []
@@ -113,18 +114,20 @@ class database:
             return []
 
     def deleteFile(self, file_key, User_id):
-        self.cursor.execute(f"Select Filename from FileData where Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'")
+        self.cursor.execute(
+            f"SELECT Filename FROM FileData WHERE Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'"
+        )
         row = self.cursor.fetchone()
         if row:
             self.cursor.execute(
-            f"DELETE from FileData where Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'"
-        )
+                f"DELETE FROM FileData WHERE Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'"
+            )
             self.conn.commit()
             return row[0]
-        
+
     def getFile(self, file_key, User_id):
         self.cursor.execute(
-            f"SELECT MessageID from FileData where USERID = '{str(User_id)}' and Filekey = '{str(file_key)}'"
+            f"SELECT MessageID FROM FileData WHERE USERID = '{str(User_id)}' and Filekey = '{str(file_key)}'"
         )
         row = self.cursor.fetchone()
         return row[0] if row else None

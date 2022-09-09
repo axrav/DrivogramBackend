@@ -10,15 +10,9 @@ from io import BytesIO
 
 import auth
 import uvicorn
-from fastapi import (
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Response,
-    UploadFile,
-)
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi import (Depends, FastAPI, Header, HTTPException,
+                     Response, UploadFile)
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security.api_key import APIKey
 
 from Database.db import database
@@ -82,11 +76,14 @@ async def home(
         Content=IN_FILE.content_type,
         Time=doc.date,
     )
-    return JSONResponse(status_code=200,content={
-        "msg": "file uploaded successfully",
-        "file_key": key_file,
-        "user": X_API_KEY,
-    })
+    return JSONResponse(
+        status_code=200,
+        content={
+            "msg": "file uploaded successfully",
+            "file_key": key_file,
+            "user": X_API_KEY,
+        },
+    )
 
 
 @web.get("/api/signup")
@@ -97,31 +94,42 @@ async def data(NAME: str | None = Header(default=None)):
             status_code=422,
             detail="missing parameter 'name',provide a name",
         )
-    return JSONResponse({"X-API-KEY": data_object.add_user(NAME)}, status_code=200)
+    return JSONResponse(
+        {"X-API-KEY": data_object.add_user(NAME)}, status_code=200
+    )
 
 
 @web.get("/api/logincheck")
 async def login(X_API_KEY: str | None = Header(default=None)):
     if X_API_KEY == None:
-        raise HTTPException(status_code=422, detail="NO X-API KEY PROVIDED UNABLE TO PROCEED")
+        raise HTTPException(
+            status_code=422,
+            detail="NO X-API KEY PROVIDED UNABLE TO PROCEED",
+        )
     x = data_object.login_check(X_API_KEY)
     if x == None:
         raise HTTPException(
             status_code=401,
             detail="Unauthorized Login, Please signup",
         )
-    return JSONResponse(status_code=200,content={
-        "login": True,
-        "user": x,
-    })
+    return JSONResponse(
+        status_code=200,
+        content={
+            "login": True,
+            "user": x,
+        },
+    )
 
 
 @web.get("/api/uploads")
 async def uploads(X_API_KEY: APIKey = Depends(auth.apikey)):
-    return JSONResponse(status_code=200, content={
-        "User": X_API_KEY,
-        "Uploads": data_object.get_uploads(X_API_KEY),
-    })
+    return JSONResponse(
+        status_code=200,
+        content={
+            "User": X_API_KEY,
+            "Uploads": data_object.get_uploads(X_API_KEY),
+        },
+    )
 
 
 @web.delete("/api/delete")
@@ -131,15 +139,15 @@ async def delete(
 ):
     name = data_object.deleteFile(FILE_KEY, X_API_KEY)
     if name == None:
-        raise HTTPException(
-            status_code=404,
-            detail="File Not Found"
-        )
-    return JSONResponse(status_code=200,content={
-        "user": X_API_KEY,
-        "file": name,
-        "message": "Deleted the file successfully",
-    })
+        raise HTTPException(status_code=404, detail="File Not Found")
+    return JSONResponse(
+        status_code=200,
+        content={
+            "user": X_API_KEY,
+            "file": name,
+            "message": "Deleted the file successfully",
+        },
+    )
 
 
 @web.get("/api/download")
