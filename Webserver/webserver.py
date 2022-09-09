@@ -89,7 +89,7 @@ async def home(
     })
 
 
-@web.post("/api/signup")
+@web.get("/api/signup")
 async def data(NAME: str | None = Header(default=None)):
     data_object.create_user_table("UserData")
     if NAME == None or NAME == "":
@@ -100,7 +100,7 @@ async def data(NAME: str | None = Header(default=None)):
     return JSONResponse({"X-API-KEY": data_object.add_user(NAME)}, status_code=200)
 
 
-@web.post("/api/logincheck")
+@web.get("/api/logincheck")
 async def login(X_API_KEY: str | None = Header(default=None)):
     if X_API_KEY == None:
         raise HTTPException(status_code=422, detail="NO X-API KEY PROVIDED UNABLE TO PROCEED")
