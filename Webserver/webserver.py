@@ -111,7 +111,8 @@ async def login(X_API_KEY: str | None = Header(default=None)):
             detail="Unauthorized Login, Please signup",
         )
     return JSONResponse(status_code=200,content={
-        "message": f"Logged in Successfully as {x}",
+        "login": True,
+        "user": x,
     })
 
 
