@@ -1,25 +1,29 @@
-from lib2to3.pgen2 import token
 import os
 import sys
-from cryptography.fernet import Fernet
 import time
+from lib2to3.pgen2 import token
+
+from cryptography.fernet import Fernet
+
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 import asyncio
+import json
 import random
 from io import BytesIO
-import jwt
+
 import auth
+import jwt
+import pytz
 import uvicorn
-from fastapi import (Depends, FastAPI, Header, HTTPException,
-                    UploadFile)
 from Crypto.Cipher import AES
-import json
-from pydantic import BaseModel
+from fastapi import (Depends, FastAPI, Header, HTTPException,
+                     UploadFile)
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security.api_key import APIKey
-import pytz
+from pydantic import BaseModel
+
 from Database.db import database
 from Functions.functions import chunk_stream, data_key
 
@@ -188,17 +192,20 @@ async def download(
             "X-FILE-NAME": file_name,
         },
     )
-class Share(BaseModel):
-    userkey : str
-    filekey : str
-    exp : int
 
+
+class Share(BaseModel):
+    userkey: str
+    filekey: str
+    exp: int
 
 
 @web.post("/api/share")
-async def sharable(share: Share ): #X_API_KEY: APIKey = Depends(auth.apikey))
+async def sharable(
+    share: Share,
+):  # X_API_KEY: APIKey = Depends(auth.apikey))
     share.exp = int(time.time()) + share.exp
-    token = jwt.encode(payload=share.__dict__,key=config.jwt_secret)
+    token = jwt.encode(payload=share.__dict__, key=config.jwt_secret)
     encrypt_client = Fernet(config.jwt_secret)
     encrypted = encrypt_client.encrypt(token.encode("utf-8"))
     return encrypted
@@ -209,15 +216,19 @@ async def share(token: str):
     decrypt_client = Fernet(config.jwt_secret)
     decrypted = decrypt_client.decrypt(token=token).decode("utf-8")
     try:
-        data = jwt.decode(decrypted, algorithms=["HS256"], key=config.jwt_secret)
-        message_id =  data_object.getFile(
-        file_key=data["filekey"], User_id=data["userkey"]
-    )
+        data = jwt.decode(
+            decrypted, algorithms=["HS256"], key=config.jwt_secret
+        )
+        message_id = data_object.getFile(
+            file_key=data["filekey"], User_id=data["userkey"]
+        )
         if message_id == None:
-             raise HTTPException(status_code=404, detail="Not Found")
+            raise HTTPException(status_code=404, detail="Not Found")
         else:
             random_client = random.choice(choose)
-            msg = await random_client.get_messages(chat_id, message_id)
+            msg = await random_client.get_messages(
+                chat_id, message_id
+            )
             file_id = msg.document.file_id
             file_size = msg.document.file_size
             file_name = msg.document.file_name
@@ -236,13 +247,9 @@ async def share(token: str):
             )
 
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=503, detail="The sharing session has expired")
-
-
-
-
-    
-
+        raise HTTPException(
+            status_code=503, detail="The sharing session has expired"
+        )
 
 
 uvicorn.run(web, port=config.web_port)
