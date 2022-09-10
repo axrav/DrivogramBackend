@@ -101,7 +101,7 @@ async def data(NAME: str | None = Header(default=None)):
     if NAME == None or NAME == "":
         raise HTTPException(
             status_code=422,
-            detail="missing parameter 'name',provide a name",
+            detail="missing parameter 'NAME',provide a name",
         )
     return JSONResponse(
         {"X-API-KEY": data_object.add_user(NAME)}, status_code=200
