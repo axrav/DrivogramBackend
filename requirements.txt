@@ -6,4 +6,4 @@ python-dotenv
 psycopg2-binary
 python-multipart
 pyjwt
-pycryptodome
+cryptography
