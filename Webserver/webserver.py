@@ -203,8 +203,9 @@ class Share(BaseModel):
 @web.post("/api/share")
 async def sharable(
     share: Share,
-):  # X_API_KEY: APIKey = Depends(auth.apikey))
-    share.exp = int(time.time()) + share.exp
+    X_API_KEY: APIKey = Depends(auth.apikey)
+):  # )
+    share.exp = int(time.time()) + share.exp*3600
     token = jwt.encode(payload=share.__dict__, key=config.jwt_secret)
     encrypt_client = Fernet(config.jwt_secret)
     encrypted = encrypt_client.encrypt(token.encode("utf-8"))
