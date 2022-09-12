@@ -210,7 +210,7 @@ async def sharable(
     encrypted = encrypt_client.encrypt(token.encode("utf-8"))
     return JSONResponse(
         status_code=200,
-        content={"link" : f"drivogram.aaravarora.in/share/?token={encrypted}"
+        content={"link" : f"drivogram.aaravarora.in/share/?token={encrypted}"}
         )
 
 
