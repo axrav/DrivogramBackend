@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-from lib2to3.pgen2 import token
 
 from cryptography.fernet import Fernet
 
@@ -197,7 +196,7 @@ async def download(
 class Share(BaseModel):
     userkey: str
     filekey: str
-    exp: int
+    exp: float
 
 
 @web.post("/api/share")
@@ -212,7 +211,7 @@ async def sharable(
     return encrypted
 
 
-@web.get("/share/{token}")
+@web.get("/share/")
 async def share(token: str):
     decrypt_client = Fernet(config.jwt_secret)
     decrypted = decrypt_client.decrypt(token=token).decode("utf-8")
