@@ -5,6 +5,7 @@ __pycache__/
 *.session
 # C extensions
 *.so
+.vscode
 .env
 # Distribution / packaging
 .Python

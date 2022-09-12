@@ -201,57 +201,67 @@ class Share(BaseModel):
 
 @web.post("/api/share")
 async def sharable(
-    share: Share,
-    X_API_KEY: APIKey = Depends(auth.apikey)
+    share: Share, X_API_KEY: APIKey = Depends(auth.apikey)
 ):  # )
-    share.exp = int(time.time()) + share.exp*3600
-    token = jwt.encode(payload=share.__dict__, key=config.jwt_secret)
+    new_time = int(time.time()) + share.exp * 3600
+    await data_object.create_share_table()
     encrypt_client = Fernet(config.jwt_secret)
-    encrypted = encrypt_client.encrypt(token.encode("utf-8"))
+    encrypted = encrypt_client.encrypt(
+        str(share.__dict__).encode("utf-8")
+    ).decode("utf-8")
+    random = data_key("", len=8)
+    data_object.share_data_add(
+        short=random, token=encrypted, userid=X_API_KEY, time=new_time
+    )
     return JSONResponse(
         status_code=200,
-        content={"link" : f"{config.domain_name}/share/?token={encrypted.decode('utf-8')}", "time" : share.exp }
-        )
+        content={
+            "link": f"{config.domain_name}/share/?token={random}",
+            "time": share.exp,
+        },
+    )
 
 
 @web.get("/share/")
 async def share(token: str):
-    decrypt_client = Fernet(config.jwt_secret)
-    decrypted = decrypt_client.decrypt(token=token.encode("utf-8")).decode("utf-8")
-    try:
-        data = jwt.decode(
-            decrypted, algorithms=["HS256"], key=config.jwt_secret
-        )
-        message_id = data_object.getFile(
-            file_key=data["filekey"], User_id=data["userkey"]
-        )
-        if message_id == None:
-            raise HTTPException(status_code=404, detail="Not Found")
-        else:
-            random_client = random.choice(choose)
-            msg = await random_client.get_messages(
-                chat_id, message_id
-            )
-            file_id = msg.document.file_id
-            file_size = msg.document.file_size
-            file_name = msg.document.file_name
-            file_content = msg.document.mime_type
-            stream_data = chunk_stream(
-                client=random_client, fileID=file_id
-            )
-            return StreamingResponse(
-                stream_data,
-                status_code=200,
-                media_type=file_content,
-                headers={
-                    "content-length": str(file_size),
-                    "X-FILE-NAME": file_name,
-                },
-            )
-
-    except jwt.ExpiredSignatureError:
+    current_time = int(time.time())
+    enc_token, time_token = data_object.share_data_search(
+        shorten=token
+    )
+    if current_time > int(time_token):
         raise HTTPException(
             status_code=503, detail="The sharing session has expired"
+        )
+    decrypt_client = Fernet(config.jwt_secret)
+    decrypted = (
+        decrypt_client.decrypt(token=enc_token.encode("utf-8"))
+        .decode("utf-8")
+        .replace("'", '"')
+    )
+    final_data = json.loads(decrypted)
+    message_id = data_object.getFile(
+        file_key=final_data["filekey"], User_id=final_data["userkey"]
+    )
+    if message_id == None:
+        raise HTTPException(status_code=404, detail="Not Found")
+    else:
+        random_client = random.choice(choose)
+        msg = await random_client.get_messages(chat_id, message_id)
+        file_id = msg.document.file_id
+        file_size = msg.document.file_size
+        file_name = msg.document.file_name
+        file_content = msg.document.mime_type
+        stream_data = chunk_stream(
+            client=random_client, fileID=file_id
+        )
+        return StreamingResponse(
+            stream_data,
+            status_code=200,
+            media_type=file_content,
+            headers={
+                "content-length": str(file_size),
+                "X-FILE-NAME": file_name,
+            },
         )
 
 

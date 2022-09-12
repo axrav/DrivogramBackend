@@ -84,6 +84,7 @@ class database:
                             Values (%s, %s)""",
             data,
         )
+        self.conn.commit()
         return key
 
     def login_check(self, key):
@@ -131,3 +132,30 @@ class database:
         )
         row = self.cursor.fetchone()
         return row[0] if row else None
+
+    async def create_share_table(self):
+        self.cursor.execute(
+            f"""CREATE TABLE IF NOT EXISTS sharedata(
+            Index Serial PRIMARY KEY,
+            Token VARCHAR(50000) UNIQUE NOT NULL,
+            Shorten VARCHAR(500) UNIQUE NOT NULL,
+            userid VARCHAR(500) NOT NULL,
+            time INT NOT NULL);
+            """
+        )
+
+    def share_data_add(self, short, token, userid, time):
+        insert = (token, short, userid, time)
+        self.cursor.execute(
+            """INSERT INTO sharedata(token,shorten,userid,time)
+        Values(%s,%s,%s,%s)""",
+            insert,
+        )
+        self.conn.commit()
+
+    def share_data_search(self, shorten):
+        self.cursor.execute(
+            f"SELECT token,time FROM sharedata WHERE Shorten = '{str(shorten)}'"
+        )
+        row = self.cursor.fetchone()
+        return row[0], row[1] if row else None
