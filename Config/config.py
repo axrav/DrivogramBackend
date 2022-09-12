@@ -20,3 +20,4 @@ class config:
     db_user = ge("DB_USER")
     db_password = ge("DB_PASSWORD")
     jwt_secret = ge("JWT_SECRET")
+    domain_name = ge("DOMAIN_NAME")
