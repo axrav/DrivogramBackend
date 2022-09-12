@@ -210,14 +210,14 @@ async def sharable(
     encrypted = encrypt_client.encrypt(token.encode("utf-8"))
     return JSONResponse(
         status_code=200,
-        content={"link" : f"drivogram.aaravarora.in/share/?token={encrypted}"}
+        content={"link" : f"drivogram.aaravarora.in/share/?token={encrypted.decode('utf-8')}"}
         )
 
 
 @web.get("/share/")
 async def share(token: str):
     decrypt_client = Fernet(config.jwt_secret)
-    decrypted = decrypt_client.decrypt(token=token).decode("utf-8")
+    decrypted = decrypt_client.decrypt(token=token.encode("utf-8")).decode("utf-8")
     try:
         data = jwt.decode(
             decrypted, algorithms=["HS256"], key=config.jwt_secret
