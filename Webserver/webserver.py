@@ -15,8 +15,7 @@ from io import BytesIO
 import auth
 import uvicorn
 from Crypto.Cipher import AES
-from fastapi import (Depends, FastAPI, Header, HTTPException,
-                     UploadFile)
+from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security.api_key import APIKey
 from pydantic import BaseModel
@@ -64,9 +63,7 @@ async def startup():
 
 
 @web.post("/api/upload")
-async def home(
-    IN_FILE: UploadFile, X_API_KEY: APIKey = Depends(auth.apikey)
-):
+async def home(IN_FILE: UploadFile, X_API_KEY: APIKey = Depends(auth.apikey)):
     try:
         content = await IN_FILE.read()
         b = BytesIO(content)
@@ -178,9 +175,7 @@ async def delete(
     try:
         name = await data_object.deleteFile(FILE_KEY, X_API_KEY)
         if name == None:
-            raise HTTPException(
-                status_code=404, detail="File Not Found"
-            )
+            raise HTTPException(status_code=404, detail="File Not Found")
         return JSONResponse(
             status_code=200,
             content={
@@ -204,37 +199,27 @@ async def download(
 ):
     try:
         if FILE_KEY == None or FILE_KEY == "":
-            raise HTTPException(
-                status_code=404, detail="Invalid file Key"
-            )
-        message_id = await data_object.getFile(
-            file_key=FILE_KEY, User_id=X_API_KEY
-        )
+            raise HTTPException(status_code=404, detail="Invalid file Key")
+        message_id = await data_object.getFile(file_key=FILE_KEY, User_id=X_API_KEY)
         if message_id == None:
-            raise HTTPException(
-                status_code=404, detail="File Not Found"
-            )
+            raise HTTPException(status_code=404, detail="File Not Found")
         else:
             random_client = random.choice(choose)
-            msg = await random_client.get_messages(
-                chat_id, message_id
-            )
+            msg = await random_client.get_messages(chat_id, message_id)
             file_id = msg.document.file_id
             file_size = msg.document.file_size
             file_name = msg.document.file_name
             file_content = msg.document.mime_type
-            stream_data = chunk_stream(
-                client=random_client, fileID=file_id
+            stream_data = chunk_stream(client=random_client, fileID=file_id)
+            return StreamingResponse(
+                stream_data,
+                status_code=200,
+                media_type=file_content,
+                headers={
+                    "content-length": str(file_size),
+                    "X-FILE-NAME": file_name,
+                },
             )
-        return StreamingResponse(
-            stream_data,
-            status_code=200,
-            media_type=file_content,
-            headers={
-                "content-length": str(file_size),
-                "X-FILE-NAME": file_name,
-            },
-        )
     except Exception as e:
         print(e)
         return JSONResponse(
@@ -250,16 +235,14 @@ class Share(BaseModel):
 
 
 @web.post("/api/share")
-async def sharable(
-    share: Share, X_API_KEY: APIKey = Depends(auth.apikey)
-):
+async def sharable(share: Share, X_API_KEY: APIKey = Depends(auth.apikey)):
     try:
         new_time = int(time.time()) + share.exp * 3600
         await data_object.create_share_table()
         encrypt_client = Fernet(config.jwt_secret)
-        encrypted = encrypt_client.encrypt(
-            str(share.__dict__).encode("utf-8")
-        ).decode("utf-8")
+        encrypted = encrypt_client.encrypt(str(share.__dict__).encode("utf-8")).decode(
+            "utf-8"
+        )
         random = data_key("", len=8)
         await data_object.share_data_add(
             short=random,
@@ -286,9 +269,7 @@ async def sharable(
 async def share(token: str):
     try:
         current_time = int(time.time())
-        enc_token, time_token = await data_object.share_data_search(
-            shorten=token
-        )
+        enc_token, time_token = await data_object.share_data_search(shorten=token)
         if current_time > int(time_token):
             raise HTTPException(
                 status_code=503,
@@ -306,21 +287,15 @@ async def share(token: str):
             User_id=final_data["userkey"],
         )
         if message_id == None:
-            raise HTTPException(
-                status_code=404, detail="File Not Found"
-            )
+            raise HTTPException(status_code=404, detail="File Not Found")
         else:
             random_client = random.choice(choose)
-            msg = await random_client.get_messages(
-                chat_id, message_id
-            )
+            msg = await random_client.get_messages(chat_id, message_id)
             file_id = msg.document.file_id
             file_size = msg.document.file_size
             file_name = msg.document.file_name
             file_content = msg.document.mime_type
-            stream_data = chunk_stream(
-                client=random_client, fileID=file_id
-            )
+            stream_data = chunk_stream(client=random_client, fileID=file_id)
             return StreamingResponse(
                 stream_data,
                 status_code=200,
