@@ -13,8 +13,6 @@ import random
 from io import BytesIO
 
 import auth
-import jwt
-import pytz
 import uvicorn
 from Crypto.Cipher import AES
 from fastapi import (Depends, FastAPI, Header, HTTPException,
@@ -70,12 +68,12 @@ async def home(
     b = BytesIO(content)
     b.name = IN_FILE.filename
     random_client = random.choice(choose)
-    data_object.create_file_table(table_name="FileData")
+    await data_object.create_file_table(table_name="FileData")
     key_file = data_key(type="FILE-", len=7)
     doc = await random_client.send_document(
         chat_id, b, force_document=True, caption=f"{key_file}"
     )
-    data_object.insert_file_data(
+    await data_object.insert_file_data(
         filename=IN_FILE.filename,
         fileSize=str(doc.document.file_size),
         MessageID=doc.id,
@@ -96,14 +94,15 @@ async def home(
 
 @web.get("/api/signup")
 async def data(NAME: str | None = Header(default=None)):
-    data_object.create_user_table("UserData")
+    await data_object.create_user_table("UserData")
     if NAME == None or NAME == "":
         raise HTTPException(
             status_code=422,
             detail="missing parameter 'NAME',provide a name",
         )
     return JSONResponse(
-        {"X-API-KEY": data_object.add_user(NAME)}, status_code=200
+        {"X-API-KEY": (await data_object.add_user(NAME))},
+        status_code=200,
     )
 
 
@@ -114,7 +113,7 @@ async def login(X_API_KEY: str | None = Header(default=None)):
             status_code=422,
             detail="NO X-API KEY PROVIDED UNABLE TO PROCEED",
         )
-    x = data_object.login_check(X_API_KEY)
+    x = await data_object.login_check(X_API_KEY)
     if x == None:
         raise HTTPException(
             status_code=401,
@@ -135,7 +134,7 @@ async def uploads(X_API_KEY: APIKey = Depends(auth.apikey)):
         status_code=200,
         content={
             "User": X_API_KEY,
-            "Uploads": data_object.get_uploads(X_API_KEY),
+            "Uploads": (await data_object.get_uploads(X_API_KEY)),
         },
     )
 
@@ -145,7 +144,7 @@ async def delete(
     FILE_KEY: str | None = Header(default=None),
     X_API_KEY: APIKey = Depends(auth.apikey),
 ):
-    name = data_object.deleteFile(FILE_KEY, X_API_KEY)
+    name = await data_object.deleteFile(FILE_KEY, X_API_KEY)
     if name == None:
         raise HTTPException(status_code=404, detail="File Not Found")
     return JSONResponse(
@@ -167,11 +166,11 @@ async def download(
         raise HTTPException(
             status_code=404, detail="Invalid file Key"
         )
-    message_id = data_object.getFile(
+    message_id = await data_object.getFile(
         file_key=FILE_KEY, User_id=X_API_KEY
     )
     if message_id == None:
-        raise HTTPException(status_code=404, detail="Not Found")
+        raise HTTPException(status_code=404, detail="File Not Found")
     else:
         random_client = random.choice(choose)
         msg = await random_client.get_messages(chat_id, message_id)
@@ -210,7 +209,7 @@ async def sharable(
         str(share.__dict__).encode("utf-8")
     ).decode("utf-8")
     random = data_key("", len=8)
-    data_object.share_data_add(
+    await data_object.share_data_add(
         short=random, token=encrypted, userid=X_API_KEY, time=new_time
     )
     return JSONResponse(
@@ -225,7 +224,7 @@ async def sharable(
 @web.get("/share/")
 async def share(token: str):
     current_time = int(time.time())
-    enc_token, time_token = data_object.share_data_search(
+    enc_token, time_token = await data_object.share_data_search(
         shorten=token
     )
     if current_time > int(time_token):
@@ -239,7 +238,7 @@ async def share(token: str):
         .replace("'", '"')
     )
     final_data = json.loads(decrypted)
-    message_id = data_object.getFile(
+    message_id = await data_object.getFile(
         file_key=final_data["filekey"], User_id=final_data["userkey"]
     )
     if message_id == None:

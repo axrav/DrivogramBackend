@@ -17,7 +17,7 @@ class database:
     )
     cursor = conn.cursor()
 
-    def create_file_table(self, table_name):
+    async def create_file_table(self, table_name):
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {table_name}(
             Index Serial PRIMARY KEY,
@@ -32,7 +32,7 @@ class database:
         )
         self.conn.commit()
 
-    def create_user_table(self, table_name):
+    async def create_user_table(self, table_name):
         self.cursor.execute(
             f"""CREATE TABLE IF NOT EXISTS {table_name}(
             Index Serial PRIMARY KEY,
@@ -41,7 +41,7 @@ class database:
         )
         self.conn.commit()
 
-    def insert_file_data(
+    async def insert_file_data(
         self,
         filename,
         fileSize,
@@ -61,43 +61,46 @@ class database:
             Time,
         )
         self.cursor.execute(
-            f"""INSERT INTO FileData(filename, FileSize, MessageID, FileKey, UserID, CONTENT,TIME)
+            """INSERT INTO FileData(filename, FileSize, MessageID, FileKey, UserID, CONTENT,TIME)
                             Values (%s, %s, %s, %s, %s, %s, %s);""",
             insert,
         )
         self.conn.commit()
 
-    def display_table_data(self, table_name):
+    async def display_table_data(self, table_name):
         self.cursor.execute(f"SELECT * FROM {table_name}")
 
-    def add_user(self, name):
+    async def add_user(self, name):
         key = data_key("DRIVO-", 10)
         data = (name, key)
         self.cursor.execute(
-            f"SELECT UserID FROM USERDATA WHERE Username = '{str(name)}';"
+            """SELECT UserID FROM USERDATA WHERE Username=%s""",
+            (name,),
         )
         row = self.cursor.fetchone()
         if row:
             return row[0]
         self.cursor.execute(
-            f"""INSERT INTO UserData(UserName, UserID)
+            """INSERT INTO UserData(UserName, UserID)
                             Values (%s, %s)""",
             data,
         )
         self.conn.commit()
         return key
 
-    def login_check(self, key):
+    async def login_check(self, key):
         self.cursor.execute(
-            f"SELECT Username from Userdata WHERE USERID = '{str(key)}';"
+            """SELECT Username from Userdata WHERE USERID = %s;""",
+            (key,),
         )
         row = self.cursor.fetchone()
         if row:
             return row[0]
 
-    def get_uploads(self, key):
+    async def get_uploads(self, key):
         self.cursor.execute(
-            f"SELECT filename, content, Filesize, FileKey FROM filedata WHERE USERID = '{str(key)}';"
+            """SELECT filename, content, Filesize, FileKey FROM filedata WHERE USERID = %s;""",
+            (key,),
         )
         rows = self.cursor.fetchall()
         final_data = []
@@ -114,28 +117,37 @@ class database:
         else:
             return []
 
-    def deleteFile(self, file_key, User_id):
+    async def deleteFile(self, file_key, User_id):
         self.cursor.execute(
-            f"SELECT Filename FROM FileData WHERE Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'"
+            """SELECT Filename FROM FileData WHERE Filekey = %s and UserID = %s""",
+            (
+                file_key,
+                User_id,
+            ),
         )
         row = self.cursor.fetchone()
         if row:
             self.cursor.execute(
-                f"DELETE FROM FileData WHERE Filekey = '{str(file_key)}' and UserID = '{str(User_id)}'"
+                """DELETE FROM FileData WHERE Filekey = %s and UserID = %s""",
+                (
+                    file_key,
+                    User_id,
+                ),
             )
             self.conn.commit()
             return row[0]
 
-    def getFile(self, file_key, User_id):
+    async def getFile(self, file_key, User_id):
         self.cursor.execute(
-            f"SELECT MessageID FROM FileData WHERE USERID = '{str(User_id)}' and Filekey = '{str(file_key)}'"
+            """SELECT MessageID FROM FileData WHERE USERID = %s and Filekey = %s;""",
+            (User_id, file_key),
         )
         row = self.cursor.fetchone()
         return row[0] if row else None
 
     async def create_share_table(self):
         self.cursor.execute(
-            f"""CREATE TABLE IF NOT EXISTS sharedata(
+            """CREATE TABLE IF NOT EXISTS sharedata(
             Index Serial PRIMARY KEY,
             Token VARCHAR(50000) UNIQUE NOT NULL,
             Shorten VARCHAR(500) UNIQUE NOT NULL,
@@ -144,7 +156,7 @@ class database:
             """
         )
 
-    def share_data_add(self, short, token, userid, time):
+    async def share_data_add(self, short, token, userid, time):
         insert = (token, short, userid, time)
         self.cursor.execute(
             """INSERT INTO sharedata(token,shorten,userid,time)
@@ -153,9 +165,10 @@ class database:
         )
         self.conn.commit()
 
-    def share_data_search(self, shorten):
+    async def share_data_search(self, shorten):
         self.cursor.execute(
-            f"SELECT token,time FROM sharedata WHERE Shorten = '{str(shorten)}'"
+            """SELECT token,time FROM sharedata WHERE Shorten = %s;""",
+            (shorten,),
         )
         row = self.cursor.fetchone()
         return row[0], row[1] if row else None
