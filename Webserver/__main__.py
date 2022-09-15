@@ -2,8 +2,6 @@ import os
 import sys
 import time
 
-from cryptography.fernet import Fernet
-
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
@@ -12,16 +10,19 @@ import json
 import random
 from io import BytesIO
 
-import auth
 import uvicorn
 from Crypto.Cipher import AES
-from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
+from fastapi import (Depends, FastAPI, Header, HTTPException,
+                     UploadFile)
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security.api_key import APIKey
 from pydantic import BaseModel
 
 from Database.db import database
-from Functions.functions import chunk_stream, data_key
+from Functions.functions import (Share, chunk_stream, data_key,
+                                 decrypt_and_return,
+                                 encrypt_and_return, file_info)
+from Webserver import auth
 
 data_object = database()
 import nest_asyncio
@@ -63,7 +64,9 @@ async def startup():
 
 
 @web.post("/api/upload")
-async def home(IN_FILE: UploadFile, X_API_KEY: APIKey = Depends(auth.apikey)):
+async def home(
+    IN_FILE: UploadFile, X_API_KEY: APIKey = Depends(auth.apikey)
+):
     try:
         content = await IN_FILE.read()
         b = BytesIO(content)
@@ -175,7 +178,9 @@ async def delete(
     try:
         name = await data_object.deleteFile(FILE_KEY, X_API_KEY)
         if name == None:
-            raise HTTPException(status_code=404, detail="File Not Found")
+            raise HTTPException(
+                status_code=404, detail="File Not Found"
+            )
         return JSONResponse(
             status_code=200,
             content={
@@ -197,52 +202,42 @@ async def download(
     FILE_KEY: str | None = Header(default=None),
     X_API_KEY: APIKey = Depends(auth.apikey),
 ):
-    try:
-        if FILE_KEY == None or FILE_KEY == "":
-            raise HTTPException(status_code=404, detail="Invalid file Key")
-        message_id = await data_object.getFile(file_key=FILE_KEY, User_id=X_API_KEY)
-        if message_id == None:
-            raise HTTPException(status_code=404, detail="File Not Found")
-        else:
-            random_client = random.choice(choose)
-            msg = await random_client.get_messages(chat_id, message_id)
-            file_id = msg.document.file_id
-            file_size = msg.document.file_size
-            file_name = msg.document.file_name
-            file_content = msg.document.mime_type
-            stream_data = chunk_stream(client=random_client, fileID=file_id)
-            return StreamingResponse(
-                stream_data,
-                status_code=200,
-                media_type=file_content,
-                headers={
-                    "content-length": str(file_size),
-                    "X-FILE-NAME": file_name,
-                },
-            )
-    except Exception as e:
-        print(e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "some server error, please try later!"},
+    if FILE_KEY == None or FILE_KEY == "":
+        raise HTTPException(
+            status_code=404, detail="Invalid file Key"
         )
-
-
-class Share(BaseModel):
-    userkey: str
-    filekey: str
-    exp: float
+    message_id = await data_object.getFile(
+        file_key=FILE_KEY, User_id=X_API_KEY
+    )
+    if message_id == None:
+        raise HTTPException(status_code=404, detail="File Not Found")
+    else:
+        random_client = random.choice(choose)
+        file_id, file_name, file_size, file_content = await file_info(
+            random_client, message_id
+        )
+        stream_data = chunk_stream(
+            client=random_client, fileID=file_id
+        )
+        return StreamingResponse(
+            stream_data,
+            status_code=200,
+            media_type=file_content,
+            headers={
+                "content-length": str(file_size),
+                "X-FILE-NAME": file_name,
+            },
+        )
 
 
 @web.post("/api/share")
-async def sharable(share: Share, X_API_KEY: APIKey = Depends(auth.apikey)):
+async def sharable(
+    share: Share, X_API_KEY: APIKey = Depends(auth.apikey)
+):
     try:
         new_time = int(time.time()) + share.exp * 3600
         await data_object.create_share_table()
-        encrypt_client = Fernet(config.jwt_secret)
-        encrypted = encrypt_client.encrypt(str(share.__dict__).encode("utf-8")).decode(
-            "utf-8"
-        )
+        encrypted = await encrypt_and_return(share)
         random = data_key("", len=8)
         await data_object.share_data_add(
             short=random,
@@ -267,50 +262,48 @@ async def sharable(share: Share, X_API_KEY: APIKey = Depends(auth.apikey)):
 
 @web.get("/share/")
 async def share(token: str):
-    try:
-        current_time = int(time.time())
-        enc_token, time_token = await data_object.share_data_search(shorten=token)
-        if current_time > int(time_token):
-            raise HTTPException(
-                status_code=503,
-                detail="The sharing session has expired",
-            )
-        decrypt_client = Fernet(config.jwt_secret)
-        decrypted = (
-            decrypt_client.decrypt(token=enc_token.encode("utf-8"))
-            .decode("utf-8")
-            .replace("'", '"')
+    # try:
+    current_time = int(time.time())
+    enc_token, time_token = await data_object.share_data_search(
+        shorten=token
+    )
+    if current_time > int(time_token):
+        raise HTTPException(
+            status_code=503,
+            detail="The sharing session has expired",
         )
-        final_data = json.loads(decrypted)
-        message_id = await data_object.getFile(
-            file_key=final_data["filekey"],
-            User_id=final_data["userkey"],
+    final_data = await decrypt_and_return(enc_token)
+    message_id = await data_object.getFile(
+        file_key=final_data["filekey"],
+        User_id=final_data["userkey"],
+    )
+    if message_id == None:
+        raise HTTPException(status_code=404, detail="File Not Found")
+    else:
+        random_client = random.choice(choose)
+        file_id, file_name, file_size, file_content = await file_info(
+            random_client, message_id
         )
-        if message_id == None:
-            raise HTTPException(status_code=404, detail="File Not Found")
-        else:
-            random_client = random.choice(choose)
-            msg = await random_client.get_messages(chat_id, message_id)
-            file_id = msg.document.file_id
-            file_size = msg.document.file_size
-            file_name = msg.document.file_name
-            file_content = msg.document.mime_type
-            stream_data = chunk_stream(client=random_client, fileID=file_id)
-            return StreamingResponse(
-                stream_data,
-                status_code=200,
-                media_type=file_content,
-                headers={
-                    "content-length": str(file_size),
-                    "X-FILE-NAME": file_name,
-                },
-            )
-    except Exception as e:
-        print(e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "some server error, please try later!"},
+        stream_data = chunk_stream(
+            client=random_client, fileID=file_id
         )
+        return StreamingResponse(
+            stream_data,
+            status_code=200,
+            media_type=file_content,
+            headers={
+                "content-length": str(file_size),
+                "X-FILE-NAME": file_name,
+            },
+        )
+
+
+# except Exception as e:
+#     print(e)
+#     return JSONResponse(
+#         status_code=500,
+#         content={"error": "some server error, please try later!"},
+#     )
 
 
 uvicorn.run(web, port=config.web_port)

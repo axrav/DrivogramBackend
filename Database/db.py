@@ -86,8 +86,8 @@ class database:
             """SELECT Username from Userdata WHERE USERID = %s;""",
             (key,),
         )
-        row = self.cursor.fetchone()[0]
-        return row if row else None
+        row = self.cursor.fetchone()
+        return row[0] if row else None
 
     async def get_uploads(self, key):
         self.cursor.execute(
@@ -134,8 +134,8 @@ class database:
             """SELECT MessageID FROM FileData WHERE USERID = %s and Filekey = %s;""",
             (User_id, file_key),
         )
-        row = self.cursor.fetchone()[0]
-        return row if row else None
+        row = self.cursor.fetchone()
+        return row[0] if row else None
 
     async def create_share_table(self):
         self.cursor.execute(

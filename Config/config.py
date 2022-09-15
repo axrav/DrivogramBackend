@@ -19,5 +19,5 @@ class config:
     db_port = ge("DB_PORT")
     db_user = ge("DB_USER")
     db_password = ge("DB_PASSWORD")
-    jwt_secret = ge("JWT_SECRET")
+    secret_key = ge("SECRET_KEY")
     domain_name = ge("DOMAIN_NAME")
