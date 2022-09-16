@@ -12,16 +12,20 @@ from io import BytesIO
 
 import uvicorn
 from Crypto.Cipher import AES
-from fastapi import (Depends, FastAPI, Header, HTTPException,
-                     UploadFile)
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.security.api_key import APIKey
 from pydantic import BaseModel
 
 from Database.db import database
-from Functions.functions import (Share, chunk_stream, data_key,
-                                 decrypt_and_return,
-                                 encrypt_and_return, file_info)
+from Functions.functions import (
+    Share,
+    chunk_stream,
+    data_key,
+    decrypt_and_return,
+    encrypt_and_return,
+    file_info,
+)
 from Webserver import auth
 
 data_object = database()
@@ -63,10 +67,13 @@ async def startup():
     asyncio.create_task(client_start())
 
 
+@web.get("/")
+async def get_home():
+    return FileResponse("index.html")
+
+
 @web.post("/api/upload")
-async def home(
-    IN_FILE: UploadFile, X_API_KEY: APIKey = Depends(auth.apikey)
-):
+async def home(IN_FILE: UploadFile, X_API_KEY: APIKey = Depends(auth.apikey)):
     try:
         content = await IN_FILE.read()
         b = BytesIO(content)
@@ -178,9 +185,7 @@ async def delete(
     try:
         name = await data_object.deleteFile(FILE_KEY, X_API_KEY)
         if name == None:
-            raise HTTPException(
-                status_code=404, detail="File Not Found"
-            )
+            raise HTTPException(status_code=404, detail="File Not Found")
         return JSONResponse(
             status_code=200,
             content={
@@ -203,12 +208,8 @@ async def download(
     X_API_KEY: APIKey = Depends(auth.apikey),
 ):
     if FILE_KEY == None or FILE_KEY == "":
-        raise HTTPException(
-            status_code=404, detail="Invalid file Key"
-        )
-    message_id = await data_object.getFile(
-        file_key=FILE_KEY, User_id=X_API_KEY
-    )
+        raise HTTPException(status_code=404, detail="Invalid file Key")
+    message_id = await data_object.getFile(file_key=FILE_KEY, User_id=X_API_KEY)
     if message_id == None:
         raise HTTPException(status_code=404, detail="File Not Found")
     else:
@@ -216,9 +217,7 @@ async def download(
         file_id, file_name, file_size, file_content = await file_info(
             random_client, message_id
         )
-        stream_data = chunk_stream(
-            client=random_client, fileID=file_id
-        )
+        stream_data = chunk_stream(client=random_client, fileID=file_id)
         return StreamingResponse(
             stream_data,
             status_code=200,
@@ -231,9 +230,7 @@ async def download(
 
 
 @web.post("/api/share")
-async def sharable(
-    share: Share, X_API_KEY: APIKey = Depends(auth.apikey)
-):
+async def sharable(share: Share, X_API_KEY: APIKey = Depends(auth.apikey)):
     try:
         new_time = int(time.time()) + share.exp * 3600
         await data_object.create_share_table()
@@ -264,9 +261,7 @@ async def sharable(
 async def share(token: str):
     # try:
     current_time = int(time.time())
-    enc_token, time_token = await data_object.share_data_search(
-        shorten=token
-    )
+    enc_token, time_token = await data_object.share_data_search(shorten=token)
     if current_time > int(time_token):
         raise HTTPException(
             status_code=503,
@@ -284,9 +279,7 @@ async def share(token: str):
         file_id, file_name, file_size, file_content = await file_info(
             random_client, message_id
         )
-        stream_data = chunk_stream(
-            client=random_client, fileID=file_id
-        )
+        stream_data = chunk_stream(client=random_client, fileID=file_id)
         return StreamingResponse(
             stream_data,
             status_code=200,
