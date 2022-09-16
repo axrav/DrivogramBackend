@@ -25,7 +25,7 @@ python3 -m Webserver
 - Store Unlimited Files (No limit on storage)
 - Your files are stored with yourself, you dont have to worry about security issues.
 - User based Drive with proper security key authentication
-- File stays forever unt you delete it.
+- File stays forever until you delete it.
 - Store your data and share whenever you want to share it(without downloading the data)
 - Open Sourced ( Make changes as per your requirements, if you know how to do XD)
 
