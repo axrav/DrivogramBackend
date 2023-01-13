@@ -140,7 +140,7 @@ async def login(X_API_KEY: str | None = Header(default=None)):
             )
         x = await data_object.login_check(X_API_KEY)
         if x == None:
-            raise HTTPException(
+            return HTTPException(
                 status_code=401,
                 detail="Unauthorized Login, Please signup",
             )
