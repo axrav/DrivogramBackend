@@ -132,7 +132,7 @@ async def data(NAME: str | None = Header(default=None)):
 
 @web.get("/api/logincheck")
 async def login(X_API_KEY: str | None = Header(default=None)):
-    try:
+    # try:
         if X_API_KEY == None:
             raise HTTPException(
                 status_code=422,
@@ -151,12 +151,12 @@ async def login(X_API_KEY: str | None = Header(default=None)):
                 "user": x,
             },
         )
-    except Exception as e:
-        print(e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "some server error, please try later!"},
-        )
+    # except Exception as e:
+    #     print(e)
+    #     return JSONResponse(
+    #         status_code=500,
+    #         content={"error": "some server error, please try later!"},
+    #     )
 
 
 @web.get("/api/uploads")
